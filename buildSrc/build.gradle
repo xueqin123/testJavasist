@@ -1,0 +1,14 @@
+apply plugin: 'java'
+repositories {
+    mavenLocal()
+    jcenter()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
+}
+dependencies {
+    implementation gradleApi()//gradle sdk
+    implementation "com.android.tools.build:gradle:4.0.0-beta04"
+    implementation 'org.javassist:javassist:3.20.0-GA'
+}
