@@ -1,5 +1,6 @@
 package com.xue.qin.buildsrc.transform;
 
+import com.android.build.api.transform.Format;
 import com.android.build.api.transform.QualifiedContent;
 import com.android.build.api.transform.Transform;
 import com.android.build.api.transform.TransformException;
@@ -13,9 +14,12 @@ import com.xue.qin.buildsrc.transform.sist.QinUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
+import javassist.CannotCompileException;
 import javassist.ClassPool;
+import javassist.CtClass;
 import javassist.NotFoundException;
 
 public class QinTransform extends Transform {
@@ -47,17 +51,33 @@ public class QinTransform extends Transform {
     }
 
     @Override
-    public void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
+    public void transform(TransformInvocation transformInvocation) {
         LogUtil.i(TAG, "transform() start");
         try {
+
+
             ClassPool classPool = new ClassPool();
             for (File file : android.getBootClasspath()) {
                 LogUtil.i(TAG, "file: " + file.getAbsolutePath());
                 classPool.appendClassPath(file.getAbsolutePath());
             }
-            QinUtils.getInstance().convert(transformInvocation.getInputs(), classPool);
-        } catch (NotFoundException e) {
+            List<CtClass> ctClassList = QinUtils.getInstance().convert(transformInvocation.getInputs(), classPool);
+            QinUtils.getInstance().addHook(ctClassList, initOutPutTargetFile(transformInvocation));
+        } catch (NotFoundException | CannotCompileException | IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private File initOutPutTargetFile(TransformInvocation transformInvocation) throws IOException {
+        transformInvocation.getOutputProvider().deleteAll();
+        File targetFile = transformInvocation.getOutputProvider().getContentLocation("main", getOutputTypes(), getScopes(), Format.JAR);
+        File parentFile = targetFile.getParentFile();
+        if (!parentFile.exists()) {
+            parentFile.mkdirs();
+        }
+        if (targetFile.exists()) {
+            targetFile.delete();
+        }
+        return targetFile;
     }
 }
