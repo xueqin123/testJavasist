@@ -30,6 +30,7 @@ public class QinUtils {
     private static final String SUFFIX_CLASS = ".class";
     private static final String SUFFIX_JAR = ".jar";
     private static String timeStampClassName = "com.xue.qin.common.TimeStamp";
+    private static Class stampClass = null;
 
     private static class SingleHolder {
         private static final QinUtils instance = new QinUtils();
@@ -49,7 +50,9 @@ public class QinUtils {
                 classPool.insertClassPath(directoryInput.getFile().getAbsolutePath());
             }
         }
-        Class timeStampClass = classPool.get(timeStampClassName).toClass();
+        if (stampClass == null) {
+            stampClass = classPool.get(timeStampClassName).toClass();
+        }
         for (TransformInput input : transformInvocation.getInputs()) {
             LogUtil.i(TAG, "jar class ----------------------------------------------------------------------------------------");
             for (JarInput jarInput : input.getJarInputs()) {
@@ -75,7 +78,7 @@ public class QinUtils {
                     String path = f.getAbsolutePath();
                     if (path.endsWith(SUFFIX_CLASS)) {
                         String className = path.substring(0, path.length() - SUFFIX_CLASS.length()).replace(dirPath, "").replace(File.separator, ".");
-                        CtClass mCtClass = addHook(classPool.get(className), timeStampClass);
+                        CtClass mCtClass = addHook(classPool.get(className), stampClass);
                         mCtClass.writeFile(destDir.getAbsolutePath());
                     }
                 }

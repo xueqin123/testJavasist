@@ -53,7 +53,7 @@ public class QinTransform extends Transform {
                 LogUtil.i(TAG, "file: " + file.getAbsolutePath());
                 classPool.appendClassPath(file.getAbsolutePath());
             }
-            QinUtils.getInstance().convert(transformInvocation,classPool);
+            QinUtils.getInstance().convert(transformInvocation, classPool);
         } catch (NotFoundException | CannotCompileException | IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }

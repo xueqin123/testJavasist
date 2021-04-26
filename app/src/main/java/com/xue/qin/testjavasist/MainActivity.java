@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.xue.qin.common.TimeStamp;
 import com.xue.qin.testjavasist.t.TestBean;
 
 public class MainActivity extends Activity implements View.OnClickListener {
@@ -23,6 +24,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         button.setOnClickListener(this);
     }
 
+    @TimeStamp
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
