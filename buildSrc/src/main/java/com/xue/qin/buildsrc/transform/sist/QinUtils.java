@@ -17,10 +17,7 @@ import java.util.Collection;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
 import javassist.CtMethod;
-import javassist.CtNewMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
 
@@ -80,7 +77,8 @@ public class QinUtils {
             CtMethod[] ctMethods = ctClass.getDeclaredMethods();
             for (CtMethod ctMethod : ctMethods) {
                 LogUtil.i(TAG, "addHook() ctMethod: " + ctMethod.getName());
-                ctMethod.insertAfter("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "()\"\" time: \" + com.xue.qin.testjavasist.utils.JavaSsistUtils.getInstance().getCurTime());");
+                ctMethod.insertBefore("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() start \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
+                ctMethod.insertAfter("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() end \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
             }
         }
         return ctClass;
@@ -88,24 +86,16 @@ public class QinUtils {
 
 
     private CtClass createNewClass(ClassPool classPool) throws NotFoundException, CannotCompileException {
-        CtClass ctClass = classPool.makeClass("com.xue.qin.testjavasist.Person");
-        CtField ctField = new CtField(classPool.get("java.lang.String"), "name", ctClass);
-        ctField.setModifiers(Modifier.PRIVATE);
-        ctClass.addField(ctField);
-        ctClass.addMethod(CtNewMethod.setter("setName", ctField));
-        ctClass.addMethod(CtNewMethod.getter("getName", ctField));
-
-        CtConstructor ctConstructor = new CtConstructor(new CtClass[]{classPool.get("java.lang.String")}, ctClass);
-        ctConstructor.setBody("{$0.name = $1;}");
-        ctClass.addConstructor(ctConstructor);
-
-        CtConstructor cons = new CtConstructor(new CtClass[]{}, ctClass);
-        cons.setBody("{name = \"qinxue\";}");
-        ctClass.addConstructor(cons);
-
-        CtMethod ctMethod = new CtMethod(CtClass.voidType, "printName", new CtClass[]{}, ctClass);
-        ctMethod.setModifiers(Modifier.PUBLIC);
-        ctMethod.setBody("{System.out.println(name);}");
+        CtClass ctClass = classPool.makeClass("com.xue.qin.testjavasist.TimeUtil");
+        CtMethod ctMethod = new CtMethod(classPool.get("java.lang.String"), "getCurTime", new CtClass[]{}, ctClass);
+        ctMethod.setModifiers(Modifier.PUBLIC | Modifier.STATIC);
+        ctMethod.setBody(
+                "{\n" +
+                        "        long cur = System.currentTimeMillis();\n" +
+                        "        java.util.Date nowTime = new java.util.Date(cur);\n" +
+                        "        java.text.SimpleDateFormat time = new java.text.SimpleDateFormat(\"yyyy/MM/dd HH:mm:ss\");\n" +
+                        "        return time.format(nowTime) + \" stamp: \" + cur;\n" +
+                        "    }");
         ctClass.addMethod(ctMethod);
         return ctClass;
     }
