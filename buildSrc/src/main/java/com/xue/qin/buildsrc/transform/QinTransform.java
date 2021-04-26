@@ -54,30 +54,15 @@ public class QinTransform extends Transform {
     public void transform(TransformInvocation transformInvocation) {
         LogUtil.i(TAG, "transform() start");
         try {
-
-
             ClassPool classPool = new ClassPool();
             for (File file : android.getBootClasspath()) {
                 LogUtil.i(TAG, "file: " + file.getAbsolutePath());
                 classPool.appendClassPath(file.getAbsolutePath());
             }
-            List<CtClass> ctClassList = QinUtils.getInstance().convert(transformInvocation.getInputs(), classPool);
-            QinUtils.getInstance().addHook(ctClassList, initOutPutTargetFile(transformInvocation));
-        } catch (NotFoundException | CannotCompileException | IOException e) {
+            QinUtils.getInstance().convert(transformInvocation,classPool);
+        } catch (NotFoundException | CannotCompileException | IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
-    private File initOutPutTargetFile(TransformInvocation transformInvocation) throws IOException {
-        transformInvocation.getOutputProvider().deleteAll();
-        File targetFile = transformInvocation.getOutputProvider().getContentLocation("main", getOutputTypes(), getScopes(), Format.JAR);
-        File parentFile = targetFile.getParentFile();
-        if (!parentFile.exists()) {
-            parentFile.mkdirs();
-        }
-        if (targetFile.exists()) {
-            targetFile.delete();
-        }
-        return targetFile;
-    }
 }
