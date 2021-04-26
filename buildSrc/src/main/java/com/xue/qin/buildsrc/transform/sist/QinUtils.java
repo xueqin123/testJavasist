@@ -1,5 +1,6 @@
 package com.xue.qin.buildsrc.transform.sist;
 
+import com.android.SdkConstants;
 import com.android.build.api.transform.DirectoryInput;
 import com.android.build.api.transform.Format;
 import com.android.build.api.transform.JarInput;
@@ -13,6 +14,9 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
@@ -25,6 +29,7 @@ public class QinUtils {
     private static final String TAG = "QinUtils";
     private static final String SUFFIX_CLASS = ".class";
     private static final String SUFFIX_JAR = ".jar";
+    private static String timeStampClassName = "com.xue.qin.common.TimeStamp";
 
     private static class SingleHolder {
         private static final QinUtils instance = new QinUtils();
@@ -36,26 +41,16 @@ public class QinUtils {
 
     public void convert(TransformInvocation transformInvocation, ClassPool classPool) throws NotFoundException, IOException, CannotCompileException, ClassNotFoundException {
         LogUtil.i(TAG, "convert()");
-        LogUtil.i(TAG, "destDir class ----------------------------------------------------------------------------------------");
         for (TransformInput input : transformInvocation.getInputs()) {
-            for (DirectoryInput directoryInput : input.getDirectoryInputs()) {
-                File dir = directoryInput.getFile();
-                classPool.insertClassPath(dir.getAbsolutePath());
-                String dirPath = dir.getAbsolutePath() + File.separator;
-                LogUtil.i(TAG, "dirPath: " + dirPath);
-                Collection<File> files = FileUtils.listFiles(dir, null, true);
-                File destDir = transformInvocation.getOutputProvider().getContentLocation(directoryInput.getName(), directoryInput.getContentTypes(), directoryInput.getScopes(), Format.DIRECTORY);
-                FileUtils.copyDirectory(dir, destDir);
-                createNewClass(classPool).writeFile(destDir.getAbsolutePath());
-                for (File f : files) {
-                    String path = f.getAbsolutePath();
-                    if (path.endsWith(SUFFIX_CLASS)) {
-                        String className = path.substring(0, path.length() - SUFFIX_CLASS.length()).replace(dirPath, "").replace(File.separator, ".");
-                        CtClass mCtClass = addHook(classPool.get(className));
-                        mCtClass.writeFile(destDir.getAbsolutePath());
-                    }
-                }
+            for (JarInput jarInput : input.getJarInputs()) {
+                classPool.insertClassPath(jarInput.getFile().getAbsolutePath());
             }
+            for (DirectoryInput directoryInput : input.getDirectoryInputs()) {
+                classPool.insertClassPath(directoryInput.getFile().getAbsolutePath());
+            }
+        }
+        Class timeStampClass = classPool.get(timeStampClassName).toClass();
+        for (TransformInput input : transformInvocation.getInputs()) {
             LogUtil.i(TAG, "jar class ----------------------------------------------------------------------------------------");
             for (JarInput jarInput : input.getJarInputs()) {
                 String destName = jarInput.getFile().getName();
@@ -67,18 +62,39 @@ public class QinUtils {
                 LogUtil.i(TAG, "jar destDir: " + destDir);
                 FileUtils.copyFile(jarInput.getFile(), destDir);
             }
+            LogUtil.i(TAG, "destDir class ----------------------------------------------------------------------------------------");
+            for (DirectoryInput directoryInput : input.getDirectoryInputs()) {
+                File dir = directoryInput.getFile();
+                String dirPath = dir.getAbsolutePath() + File.separator;
+                LogUtil.i(TAG, "dirPath: " + dirPath);
+                Collection<File> files = FileUtils.listFiles(dir, null, true);
+                File destDir = transformInvocation.getOutputProvider().getContentLocation(directoryInput.getName(), directoryInput.getContentTypes(), directoryInput.getScopes(), Format.DIRECTORY);
+                FileUtils.copyDirectory(dir, destDir);
+                createNewClass(classPool).writeFile(destDir.getAbsolutePath());
+                for (File f : files) {
+                    String path = f.getAbsolutePath();
+                    if (path.endsWith(SUFFIX_CLASS)) {
+                        String className = path.substring(0, path.length() - SUFFIX_CLASS.length()).replace(dirPath, "").replace(File.separator, ".");
+                        CtClass mCtClass = addHook(classPool.get(className), timeStampClass);
+                        mCtClass.writeFile(destDir.getAbsolutePath());
+                    }
+                }
+            }
         }
     }
 
-    private CtClass addHook(CtClass ctClass) throws CannotCompileException, IOException, ClassNotFoundException {
+    private CtClass addHook(CtClass ctClass, Class timeStampClz) throws CannotCompileException, IOException, ClassNotFoundException {
         String className = ctClass.getName();
         if (!(className.contains("JavaSsistUtils") || className.endsWith(".R") || className.contains(".R$") || className.endsWith(".BuildConfig")) && !ctClass.isInterface()) {
             LogUtil.i(TAG, "addHook() ctClass: " + ctClass.getName());
             CtMethod[] ctMethods = ctClass.getDeclaredMethods();
             for (CtMethod ctMethod : ctMethods) {
                 LogUtil.i(TAG, "addHook() ctMethod: " + ctMethod.getName());
-                ctMethod.insertBefore("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() start \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
-                ctMethod.insertAfter("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() end \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
+                Object an = ctMethod.getAnnotation(timeStampClz);
+                if (an != null) {
+                    ctMethod.insertBefore("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() start \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
+                    ctMethod.insertAfter("android.util.Log.i(\"[" + ctClass.getSimpleName() + "]\",\"" + ctMethod.getName() + "() end \"\" time: \" + com.xue.qin.testjavasist.TimeUtil.getCurTime());");
+                }
             }
         }
         return ctClass;

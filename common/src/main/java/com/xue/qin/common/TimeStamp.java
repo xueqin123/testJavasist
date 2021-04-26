@@ -1,4 +1,4 @@
-package com.xue.qin.testjavasist.ann;
+package com.xue.qin.common;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.CLASS)
-public @interface MyAnnotation {
+public @interface TimeStamp {
     public String tableName() default "className";
 }

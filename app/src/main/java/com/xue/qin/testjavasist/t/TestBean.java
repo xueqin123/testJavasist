@@ -1,12 +1,12 @@
 package com.xue.qin.testjavasist.t;
 
-import com.xue.qin.testjavasist.ann.MyAnnotation;
 
+import com.xue.qin.common.TimeStamp;
 
 public class TestBean {
     private String title = "oldTitle";
 
-    @MyAnnotation
+    @TimeStamp
     public String getTitle() {
         return title;
     }
